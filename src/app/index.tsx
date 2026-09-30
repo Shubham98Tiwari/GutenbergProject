@@ -1,98 +1,125 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from "expo-router";
+import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+import { GenreCard } from "@/components/GenreCard";
+import { GENRES } from "@/constants/genres";
+import { colors, spacing, typography } from "@/theme";
 
 export default function HomeScreen() {
-  return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
+    const { width, height } = useWindowDimensions();
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
+    const isLandscape = width > height;
 
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
+    const handleGenrePress = (genre: string) => {
+        router.push({
+            pathname: "/books/[genre]",
+            params: {
+                genre,
+            },
+        });
+    };
 
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
-  );
+    return (
+        <View style={styles.container}>
+            <View
+                style={[styles.content, isLandscape && styles.contentLandscape]}
+            >
+                <View style={styles.header}>
+                    <Text style={styles.title}>Gutenberg</Text>
+
+                    <Text style={styles.description}>
+                        A social cataloging website that allows you to freely
+                        search its database of books, annotations, and reviews.
+                    </Text>
+                </View>
+
+                <View
+                    style={[
+                        styles.genreGrid,
+                        isLandscape && styles.genreGridLandscape,
+                    ]}
+                >
+                    {GENRES.map((genre) => (
+                        <View
+                            key={genre}
+                            style={[
+                                styles.genreItem,
+                                isLandscape && styles.genreItemLandscape,
+                            ]}
+                        >
+                            <GenreCard
+                                genre={genre}
+                                onPress={() => handleGenrePress(genre)}
+                            />
+                        </View>
+                    ))}
+                </View>
+            </View>
+        </View>
+    );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
-  },
+    container: {
+        flex: 1,
+        backgroundColor: colors.background,
+    },
+
+    content: {
+        flex: 1,
+        width: "100%",
+        maxWidth: 800,
+        alignSelf: "center",
+
+        paddingHorizontal: spacing.xl,
+        paddingTop: spacing.xxxl,
+    },
+
+    contentLandscape: {
+        paddingTop: spacing.xl,
+        paddingBottom: spacing.xl,
+    },
+
+    header: {
+        alignItems: "center",
+    },
+
+    title: {
+        color: colors.primary,
+        fontFamily: typography.heading1.fontFamily,
+        fontSize: typography.heading1.fontSize,
+        lineHeight: 58,
+        textAlign: "center",
+    },
+
+    description: {
+        maxWidth: 700,
+        marginTop: spacing.lg,
+
+        color: colors.text,
+        fontFamily: typography.body.fontFamily,
+        fontSize: typography.body.fontSize,
+        lineHeight: 24,
+        textAlign: "center",
+    },
+
+    genreGrid: {
+        marginTop: spacing.xxxl,
+        gap: spacing.md,
+    },
+
+    genreGridLandscape: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        justifyContent: "center",
+        gap: spacing.md,
+    },
+
+    genreItem: {
+        width: "100%",
+    },
+
+    genreItemLandscape: {
+        width: "31%",
+    },
 });
