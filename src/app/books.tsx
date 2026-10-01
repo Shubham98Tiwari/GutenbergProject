@@ -341,14 +341,6 @@ export default function BooksScreen() {
                                         color={colors.primary}
                                     />
                                 )}
-                                <Text
-                                    style={[
-                                        styles.refreshText,
-                                        { color: colors.primary },
-                                    ]}
-                                >
-                                    {copy.books.refreshAction}
-                                </Text>
                             </Pressable>
                         )}
                     </View>
@@ -443,13 +435,17 @@ export default function BooksScreen() {
                 scrollEnabled={books.length > 0 || isLoading}
                 showsVerticalScrollIndicator={false}
                 refreshControl={
-                    <RefreshControl
-                        enabled={!isSavedRoute}
-                        refreshing={isRefreshing}
-                        onRefresh={refresh}
-                        tintColor={colors.primary}
-                        accessibilityLabel={copy.books.refreshBooks}
-                    />
+                    !isSavedRoute ? (
+                        <RefreshControl
+                            enabled={!isSavedRoute}
+                            refreshing={isRefreshing}
+                            onRefresh={refresh}
+                            progressViewOffset={40}
+                            tintColor={colors.primary}
+                            accessibilityLabel={copy.books.refreshBooks}
+                            style={{ zIndex: 2 }}
+                        />
+                    ) : undefined
                 }
                 ListEmptyComponent={
                     isLoading ? (
@@ -654,6 +650,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         gap: 9,
+        marginBottom: 16,
     },
     searchInput: {
         fontFamily: "Montserrat_400Regular",
