@@ -1,3 +1,4 @@
+import { useSavedBooks } from "@/context/saved-books";
 import { useColors } from "@/hooks/useColors";
 import {
     buildBooksUrl,
@@ -21,6 +22,7 @@ import {
     RefreshControl,
     StyleSheet,
     Text,
+    TextInput,
     useWindowDimensions,
     View,
 } from "react-native";
@@ -41,7 +43,13 @@ function BookCard({
     onOpen: (book: GutendexBook) => void;
 }) {
     const colors = useColors();
+    const { isSaved, toggleSaved } = useSavedBooks();
     const cover = getCoverUrl(book);
+    const saved = isSaved(book.id);
+
+    const handleSave = () => {
+        toggleSaved(book);
+    };
 
     return (
         <View style={styles.bookCard}>
@@ -76,7 +84,31 @@ function BookCard({
                     </View>
                 )}
             </Pressable>
-
+            <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={
+                    saved
+                        ? `Remove ${book.title} from saved books`
+                        : `Save ${book.title}`
+                }
+                testID={`save-${book.id}`}
+                onPress={handleSave}
+                style={({ pressed }) => [
+                    styles.saveButton,
+                    {
+                        backgroundColor: colors.card,
+                        shadowColor: colors.foreground,
+                        opacity: pressed ? 0.7 : 1,
+                    },
+                ]}
+            >
+                <Feather
+                    name={saved ? "bookmark" : "bookmark"}
+                    size={15}
+                    color={saved ? colors.primary : colors.mutedForeground}
+                    fill={saved ? colors.primary : "transparent"}
+                />
+            </Pressable>
             <Text
                 numberOfLines={2}
                 style={[styles.bookTitle, { color: colors.foreground }]}
@@ -104,10 +136,12 @@ export default function BooksScreen() {
     }>();
     const topic = typeof params.topic === "string" ? params.topic : "fiction";
     const genre = typeof params.genre === "string" ? params.genre : "Fiction";
+    const isSavedRoute = params.saved === "true";
+    const { savedBooks } = useSavedBooks();
     const [books, setBooks] = useState<GutendexBook[]>([]);
     const [search, setSearch] = useState("");
     const [nextUrl, setNextUrl] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState();
+    const [isLoading, setIsLoading] = useState(!isSavedRoute);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -118,6 +152,7 @@ export default function BooksScreen() {
 
     const loadInitial = useCallback(
         async (signal?: AbortSignal) => {
+            if (isSavedRoute) return;
             setIsLoading(true);
             setError(null);
             try {
@@ -136,14 +171,17 @@ export default function BooksScreen() {
                 if (!signal?.aborted) setIsLoading(false);
             }
         },
-        [search, topic],
+        [isSavedRoute, search, topic],
     );
 
     useEffect(() => {
+        if (!isSavedRoute) return;
+        setBooks(savedBooks);
         setIsLoading(false);
-    }, []);
+    }, [isSavedRoute, savedBooks]);
 
     useEffect(() => {
+        if (isSavedRoute) return;
         const controller = new AbortController();
         const timeout = setTimeout(
             () => void loadInitial(controller.signal),
@@ -153,10 +191,10 @@ export default function BooksScreen() {
             clearTimeout(timeout);
             controller.abort();
         };
-    }, [loadInitial]);
+    }, [isSavedRoute, loadInitial]);
 
     const loadMore = async () => {
-        if (!nextUrl || isLoadingMore) return;
+        if (!nextUrl || isLoadingMore || isSavedRoute) return;
         setIsLoadingMore(true);
         try {
             const data = await fetchBooks(resolveNextUrl(nextUrl));
@@ -175,6 +213,7 @@ export default function BooksScreen() {
     };
 
     const refresh = async () => {
+        if (isSavedRoute) return;
         setIsRefreshing(true);
         await loadInitial();
         setIsRefreshing(false);
@@ -199,9 +238,11 @@ export default function BooksScreen() {
         }
     };
 
-    const emptyMessage = search
-        ? `No books found for “${search.trim()}”. Try another title or author.`
-        : "No books are available in this genre yet.";
+    const emptyMessage = isSavedRoute
+        ? "Save books while browsing and they will appear here for quick access."
+        : search.trim()
+          ? `No books found for “${search.trim()}”. Try another title or author.`
+          : "No books are available in this genre yet.";
 
     const listHeader = useMemo(
         () => (
@@ -247,13 +288,66 @@ export default function BooksScreen() {
                                 styles.headerSubtitle,
                                 { color: colors.mutedForeground },
                             ]}
-                        ></Text>
+                        >
+                            {isSavedRoute
+                                ? `${books.length} saved ${books.length === 1 ? "book" : "books"}`
+                                : "Project Gutenberg shelf"}
+                        </Text>
                     </View>
                     <View style={{ width: 42 }} />
                 </View>
+                {!isSavedRoute && (
+                    <View
+                        style={[
+                            styles.searchBox,
+                            { backgroundColor: colors.secondary },
+                        ]}
+                    >
+                        <Feather
+                            name="search"
+                            size={17}
+                            color={colors.mutedForeground}
+                        />
+                        <TextInput
+                            accessibilityLabel="Search books"
+                            testID="book-search"
+                            value={search}
+                            onChangeText={setSearch}
+                            placeholder="Search title or author"
+                            placeholderTextColor={colors.mutedForeground}
+                            style={[
+                                styles.searchInput,
+                                { color: colors.foreground },
+                            ]}
+                            returnKeyType="search"
+                            autoCorrect={false}
+                        />
+                        {search.length > 0 && (
+                            <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel="Clear search"
+                                onPress={() => setSearch("")}
+                            >
+                                <Feather
+                                    name="x"
+                                    size={18}
+                                    color={colors.mutedForeground}
+                                />
+                            </Pressable>
+                        )}
+                    </View>
+                )}
             </View>
         ),
-        [colors, genre, horizontalPadding, insets.top, books.length, search],
+        [
+            colors,
+            genre,
+            horizontalPadding,
+            insets.top,
+            isSavedRoute,
+            books.length,
+            search,
+        ],
     );
 
     return (
@@ -261,7 +355,7 @@ export default function BooksScreen() {
             style={[styles.container, { backgroundColor: colors.background }]}
         >
             <FlatList
-                key={`${columns}-${""}`}
+                key={`${columns}-${isSavedRoute}`}
                 data={books}
                 numColumns={columns}
                 renderItem={({ item }) => (
@@ -372,7 +466,7 @@ export default function BooksScreen() {
                                 ]}
                             >
                                 <Feather
-                                    name={"search"}
+                                    name={isSavedRoute ? "bookmark" : "search"}
                                     size={23}
                                     color={colors.primary}
                                 />
@@ -383,7 +477,9 @@ export default function BooksScreen() {
                                     { color: colors.foreground },
                                 ]}
                             >
-                                {"No matches"}
+                                {isSavedRoute
+                                    ? "Your shelf is waiting"
+                                    : "No matches"}
                             </Text>
                             <Text
                                 style={[

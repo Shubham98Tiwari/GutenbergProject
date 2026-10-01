@@ -1,10 +1,12 @@
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { SavedBooksProvider } from "@/context/saved-books";
 import {
     Montserrat_400Regular,
     Montserrat_600SemiBold,
     Montserrat_700Bold,
     useFonts,
 } from "@expo-google-fonts/montserrat";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
@@ -14,6 +16,8 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
+
+const queryClient = new QueryClient();
 
 function RootLayoutNav() {
     return (
@@ -42,11 +46,15 @@ export default function RootLayout() {
     return (
         <SafeAreaProvider>
             <ErrorBoundary>
-                <GestureHandlerRootView style={{ flex: 1 }}>
-                    <KeyboardProvider>
-                        <RootLayoutNav />
-                    </KeyboardProvider>
-                </GestureHandlerRootView>
+                <QueryClientProvider client={queryClient}>
+                    <SavedBooksProvider>
+                        <GestureHandlerRootView style={{ flex: 1 }}>
+                            <KeyboardProvider>
+                                <RootLayoutNav />
+                            </KeyboardProvider>
+                        </GestureHandlerRootView>
+                    </SavedBooksProvider>
+                </QueryClientProvider>
             </ErrorBoundary>
         </SafeAreaProvider>
     );

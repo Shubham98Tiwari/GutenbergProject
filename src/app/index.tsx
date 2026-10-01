@@ -1,3 +1,4 @@
+import { useSavedBooks } from "@/context/saved-books";
 import { useColors } from "@/hooks/useColors";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -37,6 +38,7 @@ export default function HomeScreen() {
     const insets = useSafeAreaInsets();
     const colorScheme = useColorScheme();
     const { width } = useWindowDimensions();
+    const { savedBooks } = useSavedBooks();
     const isWide = width >= 700;
 
     return (
@@ -74,6 +76,44 @@ export default function HomeScreen() {
                             color={colors.primaryForeground}
                         />
                     </View>
+                    <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="Open saved books"
+                        testID="saved-books-button"
+                        onPress={() =>
+                            router.push({
+                                pathname: "/books",
+                                params: { saved: "true", genre: "Saved" },
+                            })
+                        }
+                        style={({ pressed }) => [
+                            styles.savedButton,
+                            { opacity: pressed ? 0.7 : 1 },
+                        ]}
+                    >
+                        <Feather
+                            name="bookmark"
+                            size={18}
+                            color={colors.primary}
+                        />
+                        {savedBooks.length > 0 && (
+                            <View
+                                style={[
+                                    styles.countBadge,
+                                    { backgroundColor: colors.primary },
+                                ]}
+                            >
+                                <Text
+                                    style={[
+                                        styles.countText,
+                                        { color: colors.primaryForeground },
+                                    ]}
+                                >
+                                    {savedBooks.length}
+                                </Text>
+                            </View>
+                        )}
+                    </Pressable>
                 </View>
 
                 <View style={styles.intro}>
