@@ -1,87 +1,71 @@
-import type { GutendexBook, GutendexResponse } from "@/types/gutendex";
-
-const API_URL = "https://gutendex.careers.ignitesol.com/books";
-
-type GetBooksParams = {
-    genre: string;
-    search?: string;
-    signal?: AbortSignal;
-};
-
-/**
- * Fetch the first page of books for a genre/search combination.
- *
- * The Ignite assessment API supports:
- * - topic: filter by genre/bookshelf/subject
- * - search: search by title/author
- * - languages: restrict results to English
- * - mime_type: request books with image formats
- */
-export async function getBooks({
-    genre,
-    search,
-    signal,
-}: GetBooksParams): Promise<GutendexResponse> {
-    const params = new URLSearchParams({
-        topic: genre,
-        languages: "en",
-        mime_type: "image/",
-    });
-
-    const trimmedSearch = search?.trim();
-
-    if (trimmedSearch) {
-        params.set("search", trimmedSearch);
-    }
-
-    const response = await fetch(`${API_URL}?${params.toString()}`, {
-        signal,
-    });
-
-    if (!response.ok) {
-        throw new Error(`Gutendex request failed: ${response.status}`);
-    }
-
-    return response.json() as Promise<GutendexResponse>;
+export interface GutendexBook {
+    id: number;
+    title: string;
+    authors: Array<{
+        name: string;
+        birth_year: number | null;
+        death_year: number | null;
+    }>;
+    subjects: string[];
+    bookshelves: string[];
+    languages: string[];
+    download_count: number;
+    formats: Record<string, string>;
 }
 
-/**
- * Fetch a pagination URL returned by the API.
- *
- * We use the API's `next` URL instead of manually constructing
- * page numbers. This keeps pagination aligned with the API response.
- */
-export async function getBooksFromUrl(
-    url: string,
-    signal?: AbortSignal,
-): Promise<GutendexResponse> {
-    const response = await fetch(url, {
-        signal,
-    });
-
-    if (!response.ok) {
-        throw new Error(`Gutendex request failed: ${response.status}`);
-    }
-
-    return response.json() as Promise<GutendexResponse>;
+export interface GutendexResponse {
+    count: number;
+    next: string | null;
+    previous: string | null;
+    results: GutendexBook[];
 }
 
-/**
- * Return the first usable cover image from the book formats.
- *
- * The API request already asks for image MIME types, but this
- * defensive check keeps the UI safe if the API ever returns
- * an unexpected format.
- */
-export function getCoverUrl(book: GutendexBook): string | null {
-    const formats = book.formats;
+const API_BASE = "https://gutendex.careers.ignitesol.com/books";
+
+export function getCoverUrl(book: GutendexBook) {
+    const cover = Object.entries(book.formats).find(
+        ([mime, url]) => mime.startsWith("image/") && !url.endsWith(".zip"),
+    );
+    return cover?.[1] ?? null;
+}
+
+export function getPreferredReadUrl(book: GutendexBook) {
+    const entries = Object.entries(book.formats).filter(
+        ([mime, url]) =>
+            !url.toLowerCase().endsWith(".zip") && !mime.includes("zip"),
+    );
+    const find = (predicate: (mime: string) => boolean) =>
+        entries.find(([mime]) => predicate(mime))?.[1] ?? null;
 
     return (
-        formats["image/jpeg"] ??
-        formats["image/png"] ??
-        Object.entries(formats).find(([mimeType]) =>
-            mimeType.startsWith("image/"),
-        )?.[1] ??
+        find((mime) => mime.startsWith("text/html")) ??
+        find((mime) => mime.includes("pdf")) ??
+        find((mime) => mime.startsWith("text/plain")) ??
         null
     );
+}
+
+export function buildBooksUrl(topic: string, search: string) {
+    const params = new URLSearchParams();
+    params.set("mime_type", "image/");
+    if (topic && topic !== "all") params.set("topic", topic);
+    if (search.trim()) params.set("search", search.trim());
+    return `${API_BASE}?${params.toString()}`;
+}
+
+export function resolveNextUrl(nextUrl: string) {
+    try {
+        const next = new URL(nextUrl);
+        return `${API_BASE}?${next.searchParams.toString()}`;
+    } catch {
+        return nextUrl;
+    }
+}
+
+export async function fetchBooks(url: string, signal?: AbortSignal) {
+    const response = await fetch(url, { signal });
+    if (!response.ok) {
+        throw new Error(`Gutendex request failed with ${response.status}`);
+    }
+    return (await response.json()) as GutendexResponse;
 }
