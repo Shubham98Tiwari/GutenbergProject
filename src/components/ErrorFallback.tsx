@@ -1,3 +1,4 @@
+import copy from "@/constants/copy";
 import { useColors } from "@/hooks/useColors";
 import { reloadAppAsync } from "expo";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -25,13 +26,13 @@ export function ErrorFallback({ error, resetError }: ErrorFallbackProps) {
         >
             <View style={styles.content}>
                 <Text style={[styles.title, { color: colors.foreground }]}>
-                    Something went wrong
+                    {copy.system.errorTitle}
                 </Text>
 
                 <Text
                     style={[styles.message, { color: colors.mutedForeground }]}
                 >
-                    Please reload the app to continue.
+                    {copy.system.reloadMessage}
                 </Text>
 
                 <Pressable
@@ -51,7 +52,7 @@ export function ErrorFallback({ error, resetError }: ErrorFallbackProps) {
                             { color: colors.primaryForeground },
                         ]}
                     >
-                        Try Again
+                        {copy.system.tryAgain}
                     </Text>
                 </Pressable>
             </View>

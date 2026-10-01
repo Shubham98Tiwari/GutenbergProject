@@ -1,3 +1,4 @@
+import copy from "@/constants/copy";
 import { useSavedBooks } from "@/context/saved-books";
 import { useColors } from "@/hooks/useColors";
 import {
@@ -31,7 +32,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 function authorLabel(book: GutendexBook) {
     return (
         book.authors[0]?.name?.split(",").reverse().join(" ").trim() ||
-        "Unknown author"
+        copy.books.unknownAuthor
     );
 }
 
@@ -55,7 +56,7 @@ function BookCard({
         <View style={styles.bookCard}>
             <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={`Open ${book.title}`}
+                accessibilityLabel={copy.books.openBook(book.title)}
                 testID={`book-${book.id}`}
                 onPress={() => onOpen(book)}
                 style={({ pressed }) => [
@@ -88,8 +89,8 @@ function BookCard({
                 accessibilityRole="button"
                 accessibilityLabel={
                     saved
-                        ? `Remove ${book.title} from saved books`
-                        : `Save ${book.title}`
+                        ? copy.books.removeSavedBook(book.title)
+                        : copy.books.saveBook(book.title)
                 }
                 testID={`save-${book.id}`}
                 onPress={handleSave}
@@ -135,7 +136,10 @@ export default function BooksScreen() {
         saved?: string;
     }>();
     const topic = typeof params.topic === "string" ? params.topic : "fiction";
-    const genre = typeof params.genre === "string" ? params.genre : "Fiction";
+    const genre =
+        typeof params.genre === "string"
+            ? params.genre
+            : copy.books.defaultGenre;
     const isSavedRoute = params.saved === "true";
     const { savedBooks } = useSavedBooks();
     const [books, setBooks] = useState<GutendexBook[]>([]);
@@ -164,9 +168,7 @@ export default function BooksScreen() {
                 setNextUrl(data.next);
             } catch (requestError) {
                 if ((requestError as Error).name !== "AbortError")
-                    setError(
-                        "We could not load this shelf. Check your connection and try again.",
-                    );
+                    setError(copy.books.initialLoadError);
             } finally {
                 if (!signal?.aborted) setIsLoading(false);
             }
@@ -206,17 +208,20 @@ export default function BooksScreen() {
             ]);
             setNextUrl(data.next);
         } catch {
-            setError("More books could not be loaded right now.");
+            setError(copy.books.moreBooksError);
         } finally {
             setIsLoadingMore(false);
         }
     };
 
     const refresh = async () => {
-        if (isSavedRoute) return;
+        if (isSavedRoute || isRefreshing) return;
         setIsRefreshing(true);
-        await loadInitial();
-        setIsRefreshing(false);
+        try {
+            await loadInitial();
+        } finally {
+            setIsRefreshing(false);
+        }
     };
 
     const openBook = async (book: GutendexBook) => {
@@ -239,10 +244,10 @@ export default function BooksScreen() {
     };
 
     const emptyMessage = isSavedRoute
-        ? "Save books while browsing and they will appear here for quick access."
+        ? copy.books.savedEmptyMessage
         : search.trim()
-          ? `No books found for “${search.trim()}”. Try another title or author.`
-          : "No books are available in this genre yet.";
+          ? copy.books.noSearchResults(search.trim())
+          : copy.books.noGenreBooks;
 
     const listHeader = useMemo(
         () => (
@@ -250,6 +255,7 @@ export default function BooksScreen() {
                 style={[
                     styles.header,
                     {
+                        backgroundColor: colors.background,
                         paddingTop:
                             insets.top + (Platform.OS === "web" ? 67 : 16),
                         paddingHorizontal: horizontalPadding,
@@ -259,7 +265,7 @@ export default function BooksScreen() {
                 <View style={styles.titleRow}>
                     <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel="Go back"
+                        accessibilityLabel={copy.books.back}
                         testID="back-button"
                         onPress={() => router.back()}
                         style={({ pressed }) => [
@@ -290,8 +296,8 @@ export default function BooksScreen() {
                             ]}
                         >
                             {isSavedRoute
-                                ? `${books.length} saved ${books.length === 1 ? "book" : "books"}`
-                                : "Project Gutenberg shelf"}
+                                ? copy.books.savedCount(books.length)
+                                : copy.books.shelfSubtitle}
                         </Text>
                     </View>
                     <View style={{ width: 42 }} />
@@ -309,11 +315,11 @@ export default function BooksScreen() {
                             color={colors.mutedForeground}
                         />
                         <TextInput
-                            accessibilityLabel="Search books"
+                            accessibilityLabel={copy.books.searchLabel}
                             testID="book-search"
                             value={search}
                             onChangeText={setSearch}
-                            placeholder="Search title or author"
+                            placeholder={copy.books.searchPlaceholder}
                             placeholderTextColor={colors.mutedForeground}
                             style={[
                                 styles.searchInput,
@@ -325,7 +331,7 @@ export default function BooksScreen() {
                         {search.length > 0 && (
                             <Pressable
                                 accessibilityRole="button"
-                                accessibilityLabel="Clear search"
+                                accessibilityLabel={copy.books.clearSearch}
                                 onPress={() => setSearch("")}
                             >
                                 <Feather
@@ -358,12 +364,12 @@ export default function BooksScreen() {
                 key={`${columns}-${isSavedRoute}`}
                 data={books}
                 numColumns={columns}
+                stickyHeaderIndices={[0]}
                 renderItem={({ item }) => (
                     <BookCard book={item} onOpen={openBook} />
                 )}
                 keyExtractor={(item) => String(item.id)}
                 ListHeaderComponent={listHeader}
-                stickyHeaderIndices={[0]}
                 contentContainerStyle={[
                     styles.listContent,
                     {
@@ -398,7 +404,7 @@ export default function BooksScreen() {
                                     { color: colors.foreground },
                                 ]}
                             >
-                                Opening the shelf…
+                                {copy.books.loadingTitle}
                             </Text>
                             <Text
                                 style={[
@@ -406,7 +412,7 @@ export default function BooksScreen() {
                                     { color: colors.mutedForeground },
                                 ]}
                             >
-                                Finding books with covers for you.
+                                {copy.books.loadingMessage}
                             </Text>
                         </View>
                     ) : error ? (
@@ -429,7 +435,7 @@ export default function BooksScreen() {
                                     { color: colors.foreground },
                                 ]}
                             >
-                                Nothing loaded yet
+                                {copy.books.loadErrorTitle}
                             </Text>
                             <Text
                                 style={[
@@ -453,7 +459,7 @@ export default function BooksScreen() {
                                         { color: colors.primaryForeground },
                                     ]}
                                 >
-                                    Try again
+                                    {copy.books.tryAgain}
                                 </Text>
                             </Pressable>
                         </View>
@@ -478,8 +484,8 @@ export default function BooksScreen() {
                                 ]}
                             >
                                 {isSavedRoute
-                                    ? "Your shelf is waiting"
-                                    : "No matches"}
+                                    ? copy.books.savedEmptyTitle
+                                    : copy.books.noMatchesTitle}
                             </Text>
                             <Text
                                 style={[
@@ -523,7 +529,7 @@ export default function BooksScreen() {
                                         { color: colors.primary },
                                     ]}
                                 >
-                                    Reload shelf
+                                    {copy.books.reloadShelf}
                                 </Text>
                             </Pressable>
                         </View>
@@ -536,7 +542,7 @@ export default function BooksScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    header: { width: "100%", marginBottom: 20 },
+    header: { width: "100%", marginBottom: 20, zIndex: 2 },
     titleRow: {
         flexDirection: "row",
         alignItems: "center",
