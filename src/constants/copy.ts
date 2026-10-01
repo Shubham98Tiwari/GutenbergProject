@@ -59,6 +59,7 @@ const copy = {
         reloadShelf: "Reload shelf",
         refreshBooks: "Refresh books",
         refreshingBooks: "Refreshing books…",
+        refreshAction: "Refresh",
     },
     system: {
         oopsTitle: "Oops!",

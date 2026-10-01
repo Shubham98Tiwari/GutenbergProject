@@ -39,9 +39,11 @@ function authorLabel(book: GutendexBook) {
 function BookCard({
     book,
     onOpen,
+    cardWidth,
 }: {
     book: GutendexBook;
     onOpen: (book: GutendexBook) => void;
+    cardWidth: number;
 }) {
     const colors = useColors();
     const { isSaved, toggleSaved } = useSavedBooks();
@@ -53,7 +55,7 @@ function BookCard({
     };
 
     return (
-        <View style={styles.bookCard}>
+        <View style={[styles.bookCard, { width: cardWidth }]}>
             <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={copy.books.openBook(book.title)}
@@ -153,6 +155,8 @@ export default function BooksScreen() {
     const columns = width >= 900 ? 6 : width >= 650 ? 5 : width >= 440 ? 4 : 3;
     const gridGap = width >= 650 ? 18 : 12;
     const horizontalPadding = width >= 650 ? 32 : 18;
+    const cardWidth =
+        (width - horizontalPadding * 2 - gridGap * (columns - 1)) / columns;
 
     const loadInitial = useCallback(
         async (signal?: AbortSignal) => {
@@ -214,15 +218,15 @@ export default function BooksScreen() {
         }
     };
 
-    const refresh = async () => {
-        if (isSavedRoute || isRefreshing) return;
+    const refresh = useCallback(async () => {
+        if (isSavedRoute || isRefreshing || isLoading) return;
         setIsRefreshing(true);
         try {
             await loadInitial();
         } finally {
             setIsRefreshing(false);
         }
-    };
+    }, [isSavedRoute, isRefreshing, isLoading, loadInitial]);
 
     const openBook = async (book: GutendexBook) => {
         const url = getPreferredReadUrl(book);
@@ -300,7 +304,54 @@ export default function BooksScreen() {
                                 : copy.books.shelfSubtitle}
                         </Text>
                     </View>
-                    <View style={{ width: 42 }} />
+                    <View style={styles.headerAction}>
+                        {!isSavedRoute && (
+                            <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel={
+                                    isRefreshing
+                                        ? copy.books.refreshingBooks
+                                        : copy.books.refreshBooks
+                                }
+                                testID="refresh-books-button"
+                                disabled={isRefreshing || isLoading}
+                                onPress={() => void refresh()}
+                                style={({ pressed }) => [
+                                    styles.refreshButton,
+                                    {
+                                        backgroundColor: colors.secondary,
+                                        opacity:
+                                            isRefreshing || isLoading
+                                                ? 0.55
+                                                : pressed
+                                                  ? 0.7
+                                                  : 1,
+                                    },
+                                ]}
+                            >
+                                {isRefreshing || isLoading ? (
+                                    <ActivityIndicator
+                                        size="small"
+                                        color={colors.primary}
+                                    />
+                                ) : (
+                                    <Feather
+                                        name="refresh-cw"
+                                        size={15}
+                                        color={colors.primary}
+                                    />
+                                )}
+                                <Text
+                                    style={[
+                                        styles.refreshText,
+                                        { color: colors.primary },
+                                    ]}
+                                >
+                                    {copy.books.refreshAction}
+                                </Text>
+                            </Pressable>
+                        )}
+                    </View>
                 </View>
                 {!isSavedRoute && (
                     <View
@@ -353,6 +404,9 @@ export default function BooksScreen() {
             isSavedRoute,
             books.length,
             search,
+            isRefreshing,
+            isLoading,
+            refresh,
         ],
     );
 
@@ -366,7 +420,11 @@ export default function BooksScreen() {
                 numColumns={columns}
                 stickyHeaderIndices={[0]}
                 renderItem={({ item }) => (
-                    <BookCard book={item} onOpen={openBook} />
+                    <BookCard
+                        book={item}
+                        onOpen={openBook}
+                        cardWidth={cardWidth}
+                    />
                 )}
                 keyExtractor={(item) => String(item.id)}
                 ListHeaderComponent={listHeader}
@@ -386,9 +444,11 @@ export default function BooksScreen() {
                 showsVerticalScrollIndicator={false}
                 refreshControl={
                     <RefreshControl
+                        enabled={!isSavedRoute}
                         refreshing={isRefreshing}
                         onRefresh={refresh}
                         tintColor={colors.primary}
+                        accessibilityLabel={copy.books.refreshBooks}
                     />
                 }
                 ListEmptyComponent={
@@ -549,12 +609,31 @@ const styles = StyleSheet.create({
         justifyContent: "space-between",
     },
     backButton: {
-        width: 42,
+        width: 82,
         height: 42,
         alignItems: "flex-start",
         justifyContent: "center",
     },
     titleWrap: { flex: 1, alignItems: "center" },
+    headerAction: {
+        width: 82,
+        alignItems: "flex-end",
+        justifyContent: "center",
+    },
+    refreshButton: {
+        minHeight: 36,
+        paddingHorizontal: 9,
+        borderRadius: 10,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 6,
+    },
+    refreshText: {
+        fontFamily: "Montserrat_600SemiBold",
+        fontSize: 12,
+        fontWeight: "600",
+    },
     headerTitle: {
         fontFamily: "Montserrat_700Bold",
         fontSize: 27,
@@ -583,7 +662,7 @@ const styles = StyleSheet.create({
         minHeight: 44,
     },
     listContent: { flexGrow: 1 },
-    bookCard: { flex: 1, minWidth: 0, position: "relative" },
+    bookCard: { minWidth: 0, position: "relative" },
     coverButton: {
         width: "100%",
         aspectRatio: 0.7,

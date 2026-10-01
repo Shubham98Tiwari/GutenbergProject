@@ -72,12 +72,75 @@ export default function HomeScreen() {
                     colorScheme === "dark" ? "light-content" : "dark-content"
                 }
             />
+            <View
+                style={[
+                    styles.fixedHeader,
+                    isWide && styles.wideContent,
+                    {
+                        backgroundColor: colors.background,
+                        paddingTop:
+                            insets.top + (Platform.OS === "web" ? 67 : 24),
+                    },
+                ]}
+            >
+                <View style={styles.header}>
+                    <View
+                        style={[
+                            styles.mark,
+                            { backgroundColor: colors.primary },
+                        ]}
+                    >
+                        <Feather
+                            name="book-open"
+                            size={22}
+                            color={colors.primaryForeground}
+                        />
+                    </View>
+                    <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={copy.home.savedBooks}
+                        testID="saved-books-button"
+                        onPress={() =>
+                            router.push({
+                                pathname: "/books",
+                                params: { saved: "true", genre: "Saved" },
+                            })
+                        }
+                        style={({ pressed }) => [
+                            styles.savedButton,
+                            { opacity: pressed ? 0.7 : 1 },
+                        ]}
+                    >
+                        <Feather
+                            name="bookmark"
+                            size={18}
+                            color={colors.primary}
+                        />
+                        {savedBooks.length > 0 && (
+                            <View
+                                style={[
+                                    styles.countBadge,
+                                    { backgroundColor: colors.primary },
+                                ]}
+                            >
+                                <Text
+                                    style={[
+                                        styles.countText,
+                                        { color: colors.primaryForeground },
+                                    ]}
+                                >
+                                    {savedBooks.length}
+                                </Text>
+                            </View>
+                        )}
+                    </Pressable>
+                </View>
+            </View>
             <ScrollView
+                style={styles.scrollView}
                 contentContainerStyle={[
                     styles.content,
                     {
-                        paddingTop:
-                            insets.top + (Platform.OS === "web" ? 67 : 24),
                         paddingBottom:
                             insets.bottom + (Platform.OS === "web" ? 34 : 28),
                     },
@@ -87,7 +150,6 @@ export default function HomeScreen() {
             >
                 <View style={styles.hero}>
                     <Svg
-                        pointerEvents="none"
                         style={styles.heroArtwork}
                         width="100%"
                         height="280"
@@ -143,59 +205,6 @@ export default function HomeScreen() {
                             strokeOpacity={0.1}
                         />
                     </Svg>
-
-                    <View style={styles.header}>
-                        <View
-                            style={[
-                                styles.mark,
-                                { backgroundColor: colors.primary },
-                            ]}
-                        >
-                            <Feather
-                                name="book-open"
-                                size={22}
-                                color={colors.primaryForeground}
-                            />
-                        </View>
-                        <Pressable
-                            accessibilityRole="button"
-                            accessibilityLabel={copy.home.savedBooks}
-                            testID="saved-books-button"
-                            onPress={() =>
-                                router.push({
-                                    pathname: "/books",
-                                    params: { saved: "true", genre: "Saved" },
-                                })
-                            }
-                            style={({ pressed }) => [
-                                styles.savedButton,
-                                { opacity: pressed ? 0.7 : 1 },
-                            ]}
-                        >
-                            <Feather
-                                name="bookmark"
-                                size={18}
-                                color={colors.primary}
-                            />
-                            {savedBooks.length > 0 && (
-                                <View
-                                    style={[
-                                        styles.countBadge,
-                                        { backgroundColor: colors.primary },
-                                    ]}
-                                >
-                                    <Text
-                                        style={[
-                                            styles.countText,
-                                            { color: colors.primaryForeground },
-                                        ]}
-                                    >
-                                        {savedBooks.length}
-                                    </Text>
-                                </View>
-                            )}
-                        </Pressable>
-                    </View>
 
                     <View style={styles.intro}>
                         <Text style={[styles.title, { color: colors.primary }]}>
@@ -326,6 +335,13 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
+    fixedHeader: {
+        width: "100%",
+        paddingHorizontal: 22,
+        zIndex: 2,
+        flexShrink: 0,
+    },
+    scrollView: { flex: 1 },
     content: { paddingHorizontal: 22 },
     wideContent: { maxWidth: 920, alignSelf: "center", width: "100%" },
     hero: {
@@ -335,8 +351,15 @@ const styles = StyleSheet.create({
         paddingBottom: 12,
         overflow: "hidden",
     },
-    heroArtwork: { position: "absolute", top: -18, left: 0, right: 0 },
+    heroArtwork: {
+        position: "absolute",
+        top: -18,
+        left: 0,
+        right: 0,
+        pointerEvents: "none",
+    },
     header: {
+        width: "100%",
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
