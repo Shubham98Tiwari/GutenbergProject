@@ -1,5 +1,6 @@
 export const colors = {
     primary: "#5E56E7",
+
     background: "#F8F7FF",
     surface: "#FFFFFF",
 
@@ -7,6 +8,10 @@ export const colors = {
     grey400: "#A0A0A0",
 
     text: "#333333",
+    textSecondary: "#666666",
+
+    border: "#E2E1EA",
+
     white: "#FFFFFF",
 
     error: "#D64545",
