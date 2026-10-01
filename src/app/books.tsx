@@ -406,11 +406,12 @@ export default function BooksScreen() {
         <View
             style={[styles.container, { backgroundColor: colors.background }]}
         >
+            {listHeader}
             <FlatList
+                style={styles.bookList}
                 key={`${columns}-${isSavedRoute}`}
                 data={books}
                 numColumns={columns}
-                stickyHeaderIndices={[0]}
                 renderItem={({ item }) => (
                     <BookCard
                         book={item}
@@ -419,7 +420,6 @@ export default function BooksScreen() {
                     />
                 )}
                 keyExtractor={(item) => String(item.id)}
-                ListHeaderComponent={listHeader}
                 contentContainerStyle={[
                     styles.listContent,
                     {
@@ -427,6 +427,8 @@ export default function BooksScreen() {
                         paddingBottom:
                             insets.bottom + (Platform.OS === "web" ? 34 : 28),
                         gap: gridGap,
+                        paddingTop:
+                            insets.top + (Platform.OS === "web" ? 67 : 16),
                     },
                 ]}
                 columnWrapperStyle={columns > 1 ? { gap: gridGap } : undefined}
@@ -440,7 +442,6 @@ export default function BooksScreen() {
                             enabled={!isSavedRoute}
                             refreshing={isRefreshing}
                             onRefresh={refresh}
-                            progressViewOffset={40}
                             tintColor={colors.primary}
                             accessibilityLabel={copy.books.refreshBooks}
                             style={{ zIndex: 2 }}
@@ -598,7 +599,10 @@ export default function BooksScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    header: { width: "100%", marginBottom: 20, zIndex: 2 },
+    header: { width: "100%", zIndex: 10, elevation: 10 },
+    bookList: {
+        flex: 1,
+    },
     titleRow: {
         flexDirection: "row",
         alignItems: "center",
